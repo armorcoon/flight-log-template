@@ -68,7 +68,9 @@ function aggregateRecords(src) {
     ]);
     return { sp, ...totals, total, flights: flights.length, basicH, advH, recent };
   });
-  return { updated: src.updated, count: records.length, rows, names: src.names || {} };
+  // records dropped by the date guard — surfaced as a banner so they never vanish silently
+  const hidden = src.data.filter(r => !(r.date >= BASIC.start && r.date <= maxDate));
+  return { updated: src.updated, count: records.length, rows, names: src.names || {}, hidden };
 }
 
 // รายชื่อศิษย์การบินมาจาก /api/data (เก็บไว้ที่ api/_sp-names.js ฝั่งเซิร์ฟเวอร์)
@@ -336,6 +338,26 @@ export default function App() {
       </div>
 
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: isMobile ? "0.75rem 0.75rem 2rem" : "1.25rem 1.5rem 2.5rem" }}>
+
+        {/* ── hidden-records warning ───────────────────────────────────────── */}
+        {raw.hidden && raw.hidden.length > 0 && (
+          <div style={{
+            ...cardStyle, background: "#FFFBEB", border: "1px solid #FCD34D",
+            color: "#92400E", fontSize: 13, marginBottom: 14, lineHeight: 1.6,
+          }}>
+            <div style={{ fontWeight: 700 }}>
+              ⚠ ซ่อนไว้ {raw.hidden.length.toLocaleString()} รายการ เพราะวันที่บินอยู่นอกช่วงหลักสูตร
+            </div>
+            <div>
+              ระบบแสดงเฉพาะเที่ยวบินตั้งแต่ {fmtEn(BASIC.start)} ถึงวันนี้ ตัวอย่าง:{" "}
+              {raw.hidden.slice(0, 5).map(r => `${r.spCode || "?"} ${r.date || "(ไม่มีวันที่)"}`).join(", ")}
+              {raw.hidden.length > 5 ? " …" : ""}
+            </div>
+            <div style={{ color: "#B45309" }}>
+              ตรวจวันที่ใน Google Sheet ว่าพิมพ์ปีถูกไหม หรือแก้วันเริ่มใน cohort.config.js
+            </div>
+          </div>
+        )}
 
         {/* ── summary metric cards ─────────────────────────────────────────── */}
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : "repeat(4,1fr)", gap: isMobile ? 8 : 12, marginBottom: 14 }}>
